@@ -450,6 +450,16 @@ function getLocalizedStrings(language) {
       "AI prompt": "ИИ-промпт",
       "Generate AI prompt": "Сгенерировать ИИ-промпт",
       "Create mind map": "Создать карту мыслей",
+      "Download all the information we hold about you. Projects can be downloaded separately.": "Скачать всю информацию, которую мы храним о вас. Проекты можно скачать отдельно.",
+      "Sessions": "Сеансы",
+      "Current": "Текущий",
+      "Device": "Устройство",
+      "Close sessions": "Завершить сеансы",
+      "This email domain is not supported. Here is the list of supported domains:": "Этот домен электронной почты не поддерживается. Вот список поддерживаемых доменов:",
+      "Unsubscribe": "Отписаться",
+      "You have been unsubscribed.": "Вы успешно отписались от рассылки.",
+      "Invalid unsubscribe link.": "Недействительная ссылка для отписки.",
+      "I agree to receive marketing emails.": "Я согласен(-на) получать маркетинговые электронные письма."
     };
   }
 
@@ -911,6 +921,16 @@ function getLocalizedStrings(language) {
       "AI prompt": "KI-Prompt",
       "Generate AI prompt": "KI-Prompt generieren",
       "Create mind map": "Mindmap erstellen",
+      "Download all the information we hold about you. Projects can be downloaded separately.": "Laden Sie alle Informationen herunter, die wir über Sie gespeichert haben. Projekte können separat heruntergeladen werden.",
+      "Sessions": "Sitzungen",
+      "Current": "Aktuell",
+      "Device": "Gerät",
+      "Close sessions": "Sitzungen beenden",
+      "This email domain is not supported. Here is the list of supported domains:": "Diese E-Mail-Domain wird nicht unterstützt. Hier ist die Liste der unterstützten Domains:",
+      "Unsubscribe": "Abmelden",
+      "You have been unsubscribed.": "Sie wurden erfolgreich von der Mailingliste abgemeldet.",
+      "Invalid unsubscribe link.": "Ungültiger Abmeldelink.",
+      "I agree to receive marketing emails.": "Ich stimme zu, Marketing-E-Mails zu erhalten."
     };
   }
 
@@ -1371,6 +1391,16 @@ function getLocalizedStrings(language) {
       "AI prompt": "Prompt IA",
       "Generate AI prompt": "Générer un prompt IA",
       "Create mind map": "Créer une carte mentale",
+      "Download all the information we hold about you. Projects can be downloaded separately.": "Téléchargez toutes les informations que nous détenons à votre sujet. Les projets peuvent être téléchargés séparément.",
+      "Sessions": "Sessions",
+      "Current": "Actuelle",
+      "Device": "Appareil",
+      "Close sessions": "Fermer les sessions",
+      "This email domain is not supported. Here is the list of supported domains:": "Ce domaine de messagerie n'est pas pris en charge. Voici la liste des domaines pris en charge:",
+      "Unsubscribe": "Se désabonner",
+      "You have been unsubscribed.": "Vous avez été désabonné avec succès.",
+      "Invalid unsubscribe link.": "Lien de désabonnement invalide.",
+      "I agree to receive marketing emails.": "Acepto recibir correos electrónicos de marketing."
     };
   }
 
@@ -1829,6 +1859,16 @@ function getLocalizedStrings(language) {
       "AI prompt": "AI užklausa",
       "Generate AI prompt": "Generuoti AI užklausą",
       "Create mind map": "Sukurti minčių žemėlapį",
+      "Download all the information we hold about you. Projects can be downloaded separately.": "Atsisiųskite visą informaciją, kurią apie jus saugome. Projektus galima atsisiųsti atskirai.",
+      "Sessions": "Sesijos",
+      "Current": "Dabartinė",
+      "Device": "Įrenginys",
+      "Close sessions": "Uždaryti sesijas",
+      "This email domain is not supported. Here is the list of supported domains:": "Šis el. pašto domenas nepalaikomas. Štai palaikomų domenų sąrašas:",
+      "Unsubscribe": "Atsisakyti prenumeratos",
+      "You have been unsubscribed.": "Jūsų prenumerata sėkmingai nutraukta.",
+      "Invalid unsubscribe link.": "Netinkama prenumeratos atsisakymo nuoroda.",
+      "I agree to receive marketing emails.": "Sutinku gauti rinkodaros el. laiškus."
     };
   }
 
@@ -2288,6 +2328,16 @@ function getLocalizedStrings(language) {
       "AI prompt": "Prompt de IA",
       "Generate AI prompt": "Generar prompt de IA",
       "Create mind map": "Crear mapa mental",
+      "Download all the information we hold about you. Projects can be downloaded separately.": "Descargue toda la información que tenemos sobre usted. Los proyectos pueden descargarse por separado.",
+      "Sessions": "Sesiones",
+      "Current": "Actual",
+      "Device": "Dispositivo",
+      "Close sessions": "Cerrar sesiones",
+      "This email domain is not supported. Here is the list of supported domains:": "Este dominio de correo electrónico no es compatible. Aquí está la lista de dominios compatibles:",
+      "Unsubscribe": "Darse de baja",
+      "You have been unsubscribed.": "Se ha dado de baja correctamente.",
+      "Invalid unsubscribe link.": "Enlace de baja no válido.",      
+      "I agree to receive marketing emails.": "Acepto recibir correos electrónicos de marketing."
     };
   }
 
@@ -2742,6 +2792,16 @@ function getLocalizedStrings(language) {
       "AI prompt": "KI-tekstinput",
       "Generate AI prompt": "Generer KI-tekstinput",
       "Create mind map": "Opprett tankekart",
+      "Download all the information we hold about you. Projects can be downloaded separately.": "Last ned all informasjon vi har om deg. Prosjekter kan lastes ned separat.",
+      "Sessions": "Økter",
+      "Current": "Gjeldende",
+      "Device": "Enhet",
+      "Close sessions": "Avslutt økter",
+      "This email domain is not supported. Here is the list of supported domains:": "Dette e-postdomenet støttes ikke. Her er listen over støttede domener:",
+      "Unsubscribe": "Meld av",
+      "You have been unsubscribed.": "Du har blitt meldt av e-postlisten.",
+      "Invalid unsubscribe link.": "Ugyldig avmeldingslenke.",
+      "I agree to receive marketing emails.": "Jeg samtykker til å motta markedsførings-e-poster."
     };
   }
   return undefined;

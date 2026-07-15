@@ -4252,7 +4252,7 @@ function trimEnd(node) {
     }
 }
 function updateFreeIconButtons(widget) {
-    var _branch_, _selectValue_227, path, row3, tr;
+    var _branch_, _selectValue_227, extraFreeIcons, path, row3, tr;
     _branch_ = 'Clear';
     while (true) {
         switch (_branch_) {
@@ -4271,6 +4271,16 @@ function updateFreeIconButtons(widget) {
             _branch_ = 'Common 2';
             break;
         case 'Common 2':
+            extraFreeIcons = false;
+            if (extraFreeIcons) {
+                addIconRowFree(widget, widget.iconButtons, 'hexagon.png', 'hexagon', 'Hexagon', '', 'step.png', 'step', 'Step', '');
+                addIconRowFree(widget, widget.iconButtons, 'parallelogram.png', 'parallelogram', 'Parallelogram', '', 'simple-input.png', 'simple-input', 'Simple input', '');
+                addIconRowFree(widget, widget.iconButtons, 'trapezoid-up.png', 'trapezoid-up', 'Trapezoid up', '', 'trapezoid-down.png', 'trapezoid-down', 'Trapezoid down', '');
+                addIconRowFree(widget, widget.iconButtons, '5-down.png', '5-down', 'Pointer down', '', '5-up.png', '5-up', 'Pointer up', '');
+            }
+            _branch_ = 'Common 3';
+            break;
+        case 'Common 3':
             addIconRowFree(widget, widget.iconButtons, 'callout.png', 'callout', 'Callout', '', 'circle.png', 'f_circle', 'Ellipse', 'E');
             addIconRowFree(widget, widget.iconButtons, 'frame.png', 'frame', 'Frame', '', 'triangle.png', 'triangle', 'Triangle', '');
             localStorage.setItem('drakonhubwidget-free-toolbar-type', widget.typeCombo.value);
