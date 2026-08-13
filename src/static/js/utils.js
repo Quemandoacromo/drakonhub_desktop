@@ -21,6 +21,13 @@ function addRange(from, to) {
         }
     }
 }
+function capitalize(text) {
+    if (text) {
+        return text[0].toUpperCase() + text.slice(1).toLowerCase();
+    } else {
+        return '';
+    }
+}
 function clone(src) {
     var dst;
     if (src) {
@@ -374,12 +381,12 @@ function deepClone(obj) {
     return deepCloneCore(visited, obj);
 }
 function deepCloneCore(visited, obj) {
-    var _selectValue_39, array, copy, item, key, value;
+    var _selectValue_2, array, copy, item, key, value;
     if (obj === undefined || obj === null) {
         return undefined;
     } else {
-        _selectValue_39 = typeof obj;
-        if (_selectValue_39 === 'number' || (_selectValue_39 === 'boolean' || _selectValue_39 === 'string' || _selectValue_39 === 'bigint' || _selectValue_39 === 'function' || _selectValue_39 === 'symbol' || obj instanceof RegExp || obj instanceof Date)) {
+        _selectValue_2 = typeof obj;
+        if (_selectValue_2 === 'number' || (_selectValue_2 === 'boolean' || _selectValue_2 === 'string' || _selectValue_2 === 'bigint' || _selectValue_2 === 'function' || _selectValue_2 === 'symbol' || obj instanceof RegExp || obj instanceof Date)) {
             return obj;
         } else {
             if (visited.has(obj)) {
@@ -750,6 +757,7 @@ function take(array, count) {
 }
 unit.FilenameChecker = FilenameChecker;
 unit.addRange = addRange;
+unit.capitalize = capitalize;
 unit.clone = clone;
 unit.contains = contains;
 unit.copyFieldsWithValue = copyFieldsWithValue;

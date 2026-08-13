@@ -353,10 +353,10 @@ function DoubleClick_create() {
 function MultiWidget() {
     var self = { _type: 'MultiWidget' };
     function getCurrent() {
-        var _collection_174, child, id;
-        _collection_174 = self.children;
-        for (id in _collection_174) {
-            child = _collection_174[id];
+        var _collection_2, child, id;
+        _collection_2 = self.children;
+        for (id in _collection_2) {
+            child = _collection_2[id];
             if (id === self.current) {
                 return child.widget;
             }
@@ -364,12 +364,12 @@ function MultiWidget() {
         throw new Error('getCurrent: current not found');
     }
     function init(content) {
-        var _collection_177, child, id;
+        var _collection_2, child, id;
         self.children = {};
         self.current = content.current;
-        _collection_177 = content.children;
-        for (id in _collection_177) {
-            child = _collection_177[id];
+        _collection_2 = content.children;
+        for (id in _collection_2) {
+            child = _collection_2[id];
             self.children[id] = {
                 widget: child,
                 container: undefined,
@@ -388,21 +388,21 @@ function MultiWidget() {
         onShowChildWidget(current);
     }
     function redraw(container) {
-        var _collection_180, child, id;
-        _collection_180 = self.children;
-        for (id in _collection_180) {
-            child = _collection_180[id];
+        var _collection_2, child, id;
+        _collection_2 = self.children;
+        for (id in _collection_2) {
+            child = _collection_2[id];
             child.container = buildWidgetDom(container, child.widget);
             stretchElement(child.container);
         }
         self.setCurrent(self.current);
     }
     function setCurrent(childId) {
-        var _collection_183, child, id;
+        var _collection_2, child, id;
         self.current = childId;
-        _collection_183 = self.children;
-        for (id in _collection_183) {
-            child = _collection_183[id];
+        _collection_2 = self.children;
+        for (id in _collection_2) {
+            child = _collection_2[id];
             if (id === self.current) {
                 if (!child.visible) {
                     display(child.container, 'inline-block');
@@ -692,7 +692,7 @@ function checkEmail(email) {
     }
 }
 function checkJsonContent(jsonString) {
-    var _collection_155, diagram, error, id, item, limit, limitBytes, obj;
+    var _collection_2, diagram, error, id, item, limit, limitBytes, obj;
     if (gconfig.maxImageSizeMb) {
         limitBytes = gconfig.maxImageSizeMb * 1024 * 1014;
         limit = limitBytes * 3;
@@ -731,9 +731,9 @@ function checkJsonContent(jsonString) {
                                         'style',
                                         'description'
                                     ]);
-                                    _collection_155 = obj.items;
-                                    for (id in _collection_155) {
-                                        item = _collection_155[id];
+                                    _collection_2 = obj.items;
+                                    for (id in _collection_2) {
+                                        item = _collection_2[id];
                                         if (id) {
                                             if (item && typeof item === 'object') {
                                                 if (ensureOptionalString(item, 'text') && ensureOptionalString(item, 'content')) {
@@ -1458,7 +1458,7 @@ function downloadTextDataAsFile(filename, data, mime) {
     window.URL.revokeObjectURL(url);
 }
 function drakonToInternal(diagram) {
-    var _collection_158, diagram2, id, item;
+    var _collection_2, diagram2, id, item;
     diagram2 = {
         items: [],
         type: diagram.type
@@ -1469,9 +1469,9 @@ function drakonToInternal(diagram) {
         'style',
         'description'
     ]);
-    _collection_158 = diagram.items;
-    for (id in _collection_158) {
-        item = _collection_158[id];
+    _collection_2 = diagram.items;
+    for (id in _collection_2) {
+        item = _collection_2[id];
         item.id = id;
         if (item.content) {
             item.text = item.content;
@@ -1559,7 +1559,7 @@ function getAppRoot() {
     return gconfig.appRoot;
 }
 function getAppVersion() {
-    return '2026.07.14';
+    return '2026.08.11';
 }
 function getBaseUrl() {
     return gconfig.baseUrl;
@@ -1661,7 +1661,7 @@ function img(src, className) {
     }, [className]);
 }
 async function importDiagram(jsonString, filename, parentId, tr) {
-    var _selectValue_161, folder, id, internal, parsed, parsedFilename, payload, url;
+    var _selectValue_2, folder, id, internal, parsed, parsedFilename, payload, url;
     parsed = checkDiagram(jsonString);
     if (parsed.error) {
         widgets.showErrorSnack(parsed.error);
@@ -1673,8 +1673,8 @@ async function importDiagram(jsonString, filename, parentId, tr) {
             internal.name = parsedFilename.name;
             internal.type = parsedFilename.extension;
         }
-        _selectValue_161 = internal.type;
-        if (_selectValue_161 === 'drakon' || (_selectValue_161 === 'free' || _selectValue_161 === 'graf')) {
+        _selectValue_2 = internal.type;
+        if (_selectValue_2 === 'drakon' || (_selectValue_2 === 'free' || _selectValue_2 === 'graf')) {
             folder = await sendCreateFolder(parentId, internal.type, internal.name);
             id = folder.id;
             payload = {
@@ -1957,15 +1957,15 @@ function initShortcuts(callbacks) {
     }, callbacks);
 }
 async function invokeWindowResize() {
-    var _collection_152, action, id;
+    var _collection_2, action, id;
     if (window.padBridge && window.padBridge.setUpStatusBar) {
         await window.padBridge.setUpStatusBar();
         await pause(200);
     }
     setRootStyle();
-    _collection_152 = unit.resizables;
-    for (id in _collection_152) {
-        action = _collection_152[id];
+    _collection_2 = unit.resizables;
+    for (id in _collection_2) {
+        action = _collection_2[id];
         action();
     }
 }

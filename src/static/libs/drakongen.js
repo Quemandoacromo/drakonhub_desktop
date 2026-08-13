@@ -148,7 +148,7 @@ function sortMindChildren(nodes) {
     for (var id in nodes) {
         var node = nodes[id]
         if (node.children) {
-            sortByProperty(node.children, "ordinal")
+            node.children = sortByProperty(node.children, "ordinal")
         }
     }
 }
@@ -179,7 +179,7 @@ function createMindNode(name) {
 }
 
 module.exports = { drakonToPseudocode, mindToTree };
-},{"./drakonToStruct":3,"./printPseudo":7,"./tools":10}],3:[function(require,module,exports){
+},{"./drakonToStruct":3,"./printPseudo":7,"./tools":11}],3:[function(require,module,exports){
 const { structFlow, redirectNode } = require("./structFlow");
 const { createError, remove } = require("./tools");
 
@@ -193,6 +193,31 @@ function drakonToStruct(
   htmlToString,
   options,
 ) {
+  options = options || {};
+  var dinfo = prepareDrakonDiagram(
+    drakonJson,
+    name,
+    filename,
+    translateFunction,
+    htmlToString,
+    options
+  )    
+
+  var diagram = dinfo.diagram;
+
+  if (dinfo.firstNodeId) {
+    var branches = dinfo.branches;
+
+    branches.forEach((branch) => cutOffBranch(dinfo.nodes, branch));
+    var branchTrees = structFlow(dinfo.nodes, branches, filename, translate, options);
+
+    diagram.branches = branchTrees
+    diagram.secondary = findSecondary(branchTrees, options)
+  }
+  return diagram
+}
+
+function prepareDrakonDiagram(drakonJson, name, filename, translateFunction, htmlToString, options) {
   options = options || {};
   translate = translateFunction;
   let drakonGraph;
@@ -213,13 +238,20 @@ function drakonToStruct(
   var params = decodeContent(drakonGraph.params, htmlToString);
   var description = decodeContent(drakonGraph.description, htmlToString);
 
-  var result = {
+  var diagram = {
     name: name,
     type: "drakon",
     params:  params,
     description: description,
     branches: []
   };
+
+  var result = {
+    diagram: diagram,
+    nodes: nodes,
+    branches: branches,
+    firstNodeId: firstNodeId
+  }
 
   if (!firstNodeId) {
     return result
@@ -237,12 +269,10 @@ function drakonToStruct(
       options
     ),
   );
-  rewireShortcircuit(nodes, filename);
-  branches.forEach((branch) => cutOffBranch(nodes, branch));
-  var branchTrees = structFlow(nodes, branches, filename, translate, options);
+  if (!options.skipShortcuts) {
+    rewireShortcircuit(nodes, filename);
+  }
 
-  result.branches = branchTrees
-  result.secondary = findSecondary(branchTrees, options)
   return result
 }
 
@@ -536,11 +566,11 @@ function findStartNode(nodes, filename, branches, htmlToString) {
 }
 
 function decodeNodeContent(node, htmlToString) {
-  if (node.content) {
+  if (node.content && typeof node.content === "string") {
     node.content = decodeContent(node.content, htmlToString);
   }
 
-  if (node.secondary) {
+  if (node.secondary && typeof node.secondary === "string") {
     node.secondary = decodeContent(node.secondary, htmlToString);
   }
 }
@@ -837,12 +867,13 @@ function markLoopBody(nodes, start, filename) {
   throw createError(translate("Loop end expected here"), filename, start.one);
 }
 
-module.exports = { drakonToStruct, drakonToGraph };
+module.exports = { drakonToStruct, drakonToGraph, prepareDrakonDiagram };
 
-},{"./structFlow":8,"./tools":10}],4:[function(require,module,exports){
+},{"./structFlow":9,"./tools":11}],4:[function(require,module,exports){
 const { drakonToPseudocode, mindToTree } = require("./drakonToPromptStruct");
 const { htmlToString } = require("./browserTools");
 const { setUpLanguage, translate } = require("./translate");
+const { treeToScenarios, printScenarios } = require("./scenarios");
 const { drakonToStruct } = require("./drakonToStruct");
 const { freeDiagramToText } = require("./free");
 
@@ -894,9 +925,36 @@ window.drakongen = {
     );
     return JSON.stringify(result, null, 4);
   },
+
+  makeScenarios: function (drakonJson, name, filename, language) {
+    setUpLanguage(language);
+    var scenarios = treeToScenarios(
+      drakonJson,
+      name,
+      filename,
+      translate,
+      htmlToString
+    );
+    return printScenarios(
+      scenarios,
+      name,
+      translate
+    );
+  },
+  makeScenariosJson: function (drakonJson, name, filename, language) {
+    setUpLanguage(language);
+    var result = treeToScenarios(
+      drakonJson,
+      name,
+      filename,
+      translate,
+      htmlToString
+    );
+    return JSON.stringify(result, null, 4);
+  },   
 };
 
-},{"./browserTools":1,"./drakonToPromptStruct":2,"./drakonToStruct":3,"./free":5,"./translate":11}],5:[function(require,module,exports){
+},{"./browserTools":1,"./drakonToPromptStruct":2,"./drakonToStruct":3,"./free":5,"./scenarios":8,"./translate":12}],5:[function(require,module,exports){
 var {addRange} = require("./tools")
 const { createError } = require("./tools");
 
@@ -966,188 +1024,142 @@ function freeDiagramToText(freeJson, name, filename, translateFunction, htmlToSt
 }
 
 module.exports = {freeDiagramToText}
-},{"./tools":10}],6:[function(require,module,exports){
-"use strict";
-
+},{"./tools":11}],6:[function(require,module,exports){
+function decrement_arrow_count(context, node) {
+    var algonode;
+    algonode = context.nodes[node.arrow];
+    algonode.branching--;
+}
 function decrement_if_count(context, node) {
-    var i;
-    var if_id;
-    var if_node;
-
-    for (i = 0; i < node.stack.length; i++) {
-        if_id = node.stack[i];
+    var _collection_12, if_id, if_node;
+    _collection_12 = node.stack;
+    for (if_id of _collection_12) {
         if_node = context.nodes[if_id];
         if_node.branching--;
     }
 }
-
 function flow_no_loop(nodes, start_node_id) {
     var context;
-
-    context = {
-        nodes: nodes
-    };
-
-    traverse_node(
-        context,
-        start_node_id,
-        []
-    );
+    context = { nodes: nodes };
+    traverse_node(context, start_node_id, []);
 }
-
 function group_stack_by_id(stack) {
-    var counts_by_id;
-    var i;
-    var element;
-    var existing;
-
+    var counts_by_id, element, existing;
     counts_by_id = {};
-
-    for (i = 0; i < stack.length; i++) {
-        element = stack[i];
-
+    for (element of stack) {
         if (element in counts_by_id) {
             existing = counts_by_id[element];
         } else {
             existing = 0;
         }
-
         counts_by_id[element] = existing + 1;
     }
-
     return counts_by_id;
 }
-
 function increment_if_count(context, node) {
-    var i;
-    var if_id;
-    var if_node;
-
-    for (i = 0; i < node.stack.length; i++) {
-        if_id = node.stack[i];
+    var _collection_14, if_id, if_node;
+    _collection_14 = node.stack;
+    for (if_id of _collection_14) {
         if_node = context.nodes[if_id];
         if_node.branching++;
     }
 }
-
-function merge_incoming_branches(context, node_id, node, stack) {
-    var common;
-    var counts_by_id;
-    var processed_stack;
-    var ids;
-    var i;
-    var id;
-    var count;
-    var if_node;
-
+function is_in_map(map, key) {
+    if (map) {
+        return key in map;
+    } else {
+        return false;
+    }
+}
+function merge_converging_branches(context, node_id, node, stack) {
+    var algonode, algonode_id, common, count, counts_by_id, processed_stack, stub;
     common = node.stack.concat(stack);
     counts_by_id = group_stack_by_id(common);
+    for (algonode_id in counts_by_id) {
+        count = counts_by_id[algonode_id];
+        algonode = context.nodes[algonode_id];
+        if (!algonode.next && algonode.type == 'arrow-loop') {
+            algonode.branching -= count - 1;
+            if (!(algonode.branching > 1 || is_in_map(node.astack, algonode_id))) {
+                stub = context.nodes[algonode.stub];
+                decrement_if_count(context, stub);
+                stub.one = node_id;
+                algonode.next = node_id;
+            }
+        }
+    }
     processed_stack = [];
-
-    ids = Object.keys(counts_by_id);
-
-    for (i = 0; i < ids.length; i++) {
-        id = ids[i];
-        count = counts_by_id[id];
-
-        if_node = context.nodes[id];
-
-        if (!if_node.next) {
-            if (if_node.branching === 1) {
-                if_node.next = node_id;
-            } else {
-                if_node.branching -= count - 1;
-
-                if (if_node.branching === 1) {
-                    if_node.next = node_id;
+    for (algonode_id in counts_by_id) {
+        count = counts_by_id[algonode_id];
+        algonode = context.nodes[algonode_id];
+        if (!algonode.next) {
+            if (algonode.type == 'question') {
+                algonode.branching -= count - 1;
+                if (algonode.branching > 1) {
+                    processed_stack.push(algonode_id);
                 } else {
-                    processed_stack.push(id);
+                    algonode.next = node_id;
+                }
+            } else {
+                processed_stack.push(algonode_id);
+            }
+        }
+    }
+    node.stack = processed_stack;
+}
+function recurse_traversal(context, node_id, node) {
+    var _collection_20, _selectValue_18, proc, stack1, stack2;
+    _selectValue_18 = node.type;
+    if (_selectValue_18 === 'question') {
+        increment_if_count(context, node);
+        stack1 = node.stack.slice();
+        stack1.push(node_id);
+        stack2 = node.stack.slice();
+        stack2.push(node_id);
+        traverse_node(context, node.two, stack2);
+        traverse_node(context, node.one, stack1);
+    } else {
+        if (_selectValue_18 === 'arrow-loop') {
+            stack1 = node.stack.slice();
+            stack1.push(node_id);
+            traverse_node(context, node.one, stack1);
+        } else {
+            if (_selectValue_18 === 'arrow-stub') {
+                decrement_arrow_count(context, node);
+            } else {
+                if (_selectValue_18 === 'parbegin') {
+                    _collection_20 = node.procs;
+                    for (proc of _collection_20) {
+                        flow_no_loop(context.nodes, proc.start);
+                    }
+                } else {
+                    if (node.final) {
+                        decrement_if_count(context, node);
+                    } else {
+                        stack1 = node.stack.slice();
+                        traverse_node(context, node.one, stack1);
+                    }
                 }
             }
         }
     }
-
-    node.stack = processed_stack;
 }
-
-function recurse_traversal(context, node_id, node) {
-    var stack1;
-    var stack2;
-
-    if (node.type === "question") {
-        increment_if_count(
-            context,
-            node
-        );
-
-        stack1 = node.stack.slice();
-        stack1.push(node_id);
-
-        stack2 = node.stack.slice();
-        stack2.push(node_id);
-
-        traverse_node(
-            context,
-            node.one,
-            stack1
-        );
-
-        traverse_node(
-            context,
-            node.two,
-            stack2
-        );
-    } else {
-        if (node.final) {
-            decrement_if_count(
-                context,
-                node
-            );
-        } else {
-            stack1 = node.stack.slice();
-
-            traverse_node(
-                context,
-                node.one,
-                stack1
-            );
-        }
-    }
-}
-
 function traverse_node(context, node_id, stack) {
     var node;
-
     if (node_id) {
         node = context.nodes[node_id];
-
         if (!node.stack) {
             node.stack = [];
             node.refs = node.prev.length;
         }
-
         node.refs--;
-
-        merge_incoming_branches(
-            context,
-            node_id,
-            node,
-            stack
-        );
-
+        merge_converging_branches(context, node_id, node, stack);
         if (!(node.refs > 0)) {
-            recurse_traversal(
-                context,
-                node_id,
-                node
-            );
+            recurse_traversal(context, node_id, node);
         }
     }
 }
-
-module.exports = {
-    flow_no_loop: flow_no_loop
-};
+module.exports = { flow_no_loop };
 },{}],7:[function(require,module,exports){
 var {addRange} = require("./tools")
 
@@ -1333,7 +1345,333 @@ function printPseudo(algorithm, translate, output, htmlToString) {
 }
 
 module.exports = {printPseudo, printWithIndent, makeIndent}
-},{"./tools":10}],8:[function(require,module,exports){
+},{"./tools":11}],8:[function(require,module,exports){
+const {prepareDrakonDiagram} = require('./drakonToStruct');
+var tr;
+function addContent(step, depth, lines) {
+    var _selectValue_2, content;
+    if (step.secondary) {
+        addLine(step.secondary, depth, lines);
+    }
+    _selectValue_2 = step.type;
+    if (_selectValue_2 === 'question') {
+        content = normalizeContent(step);
+        if (step.answer === 'yes') {
+            content = yesPath(content);
+        } else {
+            content = noPath(content);
+        }
+    } else {
+        if (_selectValue_2 === 'loopbegin') {
+            if (step.loop === 'iteration') {
+                content = iteration(step.content);
+            } else {
+                content = skipLoop(step.content);
+            }
+        } else {
+            content = step.content;
+        }
+    }
+    addLine(content, depth, lines);
+}
+function addLine(text, depth, lines) {
+    var indent, part, parts;
+    indent = ' '.repeat(4 * depth);
+    parts = text.split('\n');
+    for (part of parts) {
+        lines.push(indent + part);
+    }
+}
+function branchContext(ctx) {
+    return {
+        nodes: ctx.nodes,
+        firstNodeId: ctx.firstNodeId,
+        scenarios: ctx.scenarios,
+        decisions: ctx.decisions,
+        branchCount: clone(ctx.branchCount)
+    };
+}
+function buildContent(step) {
+    var _selectValue_2, content;
+    _selectValue_2 = step.type;
+    if (_selectValue_2 === 'question') {
+        content = normalizeContent(step);
+        if (step.answer === 'yes') {
+            return yesPath(content);
+        } else {
+            return noPath(content);
+        }
+    } else {
+        if (_selectValue_2 === 'loopbegin') {
+            if (step.loop === 'iteration') {
+                return iteration(step.content);
+            } else {
+                return skipLoop(step.content);
+            }
+        } else {
+            return step.content;
+        }
+    }
+}
+function clone(obj) {
+    var copy;
+    copy = {};
+    Object.assign(copy, obj);
+    return copy;
+}
+function cloneContext(ctx, firstNodeId, scenarios) {
+    return {
+        nodes: ctx.nodes,
+        firstNodeId: firstNodeId,
+        scenarios: scenarios,
+        decisions: {},
+        branchCount: {}
+    };
+}
+function cloneScenario(ctx, scenario) {
+    var clone;
+    clone = scenario.slice();
+    ctx.scenarios.push(clone);
+    return clone;
+}
+function cloneStep(step, scenario) {
+    var clone;
+    clone = {
+        id: step.id,
+        type: step.type,
+        content: step.content
+    };
+    if (!(step.secondary === undefined)) {
+        clone.secondary = step.secondary;
+    }
+    if (!(step.message === undefined)) {
+        clone.message = step.message;
+    }
+    scenario.push(clone);
+    return clone;
+}
+function createContext(dinfo) {
+    return {
+        nodes: dinfo.nodes,
+        firstNodeId: dinfo.firstNodeId,
+        scenarios: [],
+        decisions: {},
+        branchCount: {}
+    };
+}
+function createScenario(ctx) {
+    var scenario;
+    scenario = [];
+    ctx.scenarios.push(scenario);
+    return scenario;
+}
+function getQuestionExits(step) {
+    if (step.flag1 == 1) {
+        return {
+            down: 'yes',
+            right: 'no'
+        };
+    } else {
+        return {
+            down: 'no',
+            right: 'yes'
+        };
+    }
+}
+function handleParallel(ctx, step, scenario) {
+    var _collection_2, clone, ctxClone, next, proc, proc2;
+    next = step.procs[0].next;
+    clone = {
+        id: step.id,
+        procs: [],
+        type: 'parallel'
+    };
+    scenario.push(clone);
+    _collection_2 = step.procs;
+    for (proc of _collection_2) {
+        proc2 = { scenarios: [] };
+        clone.procs.push(proc2);
+        ctxClone = cloneContext(ctx, proc.start, proc2.scenarios);
+        scanAlgorithm(ctxClone);
+    }
+    traverseNode(ctx, next, scenario);
+}
+function iteration(content) {
+    return tr('Iteration') + ': ' + content;
+}
+function noPath(content) {
+    return content + ' - ' + tr('No');
+}
+function normalizeContent(step) {
+    var content;
+    content = step.content;
+    if (content.operator === 'equal') {
+        return content.left + ' == ' + content.right;
+    } else {
+        return content;
+    }
+}
+function printParallel(step, baseIndex, depth, lines) {
+    var _collection_2, branch, i;
+    i = 1;
+    _collection_2 = step.procs;
+    for (branch of _collection_2) {
+        addLine(tr('Parallel process') + ' ' + i, depth, lines);
+        printScenariosCore(branch.scenarios, baseIndex + '.' + i, depth + 1, lines);
+        i++;
+    }
+}
+function printScenario(scenario, baseIndex, depth, lines) {
+    var step;
+    for (step of scenario) {
+        if (step.type === 'parallel') {
+            printParallel(step, baseIndex, depth, lines);
+        } else {
+            if (step.type === 'error') {
+                addLine(step.message + ': ' + step.content, depth, lines);
+            } else {
+                addContent(step, depth, lines);
+            }
+        }
+    }
+}
+function printScenarios(scenarios, name, translateFunction) {
+    var baseIndex, depth, lines;
+    tr = translateFunction;
+    lines = [];
+    lines.push('# ' + name + ': ' + tr('scenarios'));
+    baseIndex = '';
+    depth = 0;
+    printScenariosCore(scenarios, baseIndex, depth, lines);
+    return lines.join('\n');
+}
+function printScenariosCore(scenarios, baseIndex, depth, lines) {
+    var i, scenario, subheader;
+    if (baseIndex) {
+        baseIndex = baseIndex + '.';
+    }
+    i = 1;
+    for (scenario of scenarios) {
+        subheader = tr('Scenario') + ' ' + baseIndex + i;
+        addLine(subheader, depth, lines);
+        printScenario(scenario, baseIndex + i, depth + 1, lines);
+        i++;
+    }
+}
+function scanAlgorithm(ctx) {
+    var scenario;
+    scenario = createScenario(ctx);
+    traverseNode(ctx, ctx.firstNodeId, scenario);
+}
+function skipLoop(content) {
+    return tr('Skip loop') + ': ' + content;
+}
+function tooManyLoops(ctx, nodeId) {
+    var maxBranch;
+    maxBranch = 2;
+    if (!(nodeId in ctx.branchCount)) {
+        ctx.branchCount[nodeId] = 0;
+    }
+    ctx.branchCount[nodeId]++;
+    if (ctx.branchCount[nodeId] > maxBranch) {
+        return true;
+    } else {
+        return false;
+    }
+}
+function traverseNode(ctx, nodeId, scenario) {
+    var _selectValue_2, ctx2, down, exits, iteration, right, scenarioRight, skip, step, visited;
+    if (nodeId) {
+        step = ctx.nodes[nodeId];
+        visited = visit(ctx, step);
+        _selectValue_2 = step.type;
+        if (_selectValue_2 === 'question') {
+            exits = getQuestionExits(step);
+            if (visited) {
+                down = cloneStep(step, scenario);
+                down.answer = exits.down;
+                traverseNode(ctx, step.one, scenario);
+            } else {
+                ctx2 = branchContext(ctx);
+                scenarioRight = cloneScenario(ctx2, scenario);
+                down = cloneStep(step, scenario);
+                down.answer = exits.down;
+                traverseNode(ctx, step.one, scenario);
+                right = cloneStep(step, scenarioRight);
+                right.answer = exits.right;
+                traverseNode(ctx2, step.two, scenarioRight);
+            }
+        } else {
+            if (_selectValue_2 === 'loopbegin') {
+                if (visited) {
+                    iteration = cloneStep(step, scenario);
+                    iteration.loop = 'iteration';
+                    traverseNode(ctx, step.one, scenario);
+                } else {
+                    ctx2 = branchContext(ctx);
+                    scenarioRight = cloneScenario(ctx2, scenario);
+                    iteration = cloneStep(step, scenario);
+                    iteration.loop = 'iteration';
+                    traverseNode(ctx, step.one, scenario);
+                    skip = cloneStep(step, scenarioRight);
+                    skip.loop = 'skip';
+                    traverseNode(ctx2, step.next, scenarioRight);
+                }
+            } else {
+                if (_selectValue_2 === 'branch') {
+                    if (step.content) {
+                        cloneStep(step, scenario);
+                    }
+                    if (!tooManyLoops(ctx, nodeId)) {
+                        traverseNode(ctx, step.one, scenario);
+                    }
+                } else {
+                    if (_selectValue_2 === 'parbegin') {
+                        handleParallel(ctx, step, scenario);
+                    } else {
+                        if (!(_selectValue_2 === 'parend')) {
+                            if (step.content) {
+                                cloneStep(step, scenario);
+                            }
+                            if (!(step.type === 'error')) {
+                                traverseNode(ctx, step.one, scenario);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+function treeToScenarios(drakonJson, name, filename, translateFunction, htmlToString) {
+    var ctx, dinfo, options;
+    tr = translateFunction;
+    options = { skipShortcuts: true };
+    dinfo = prepareDrakonDiagram(drakonJson, name, filename, translateFunction, htmlToString, options);
+    if (dinfo.firstNodeId) {
+        ctx = createContext(dinfo);
+        scanAlgorithm(ctx, dinfo);
+        return ctx.scenarios;
+    } else {
+        return [];
+    }
+}
+function visit(ctx, step) {
+    if (step.id in ctx.decisions) {
+        return true;
+    } else {
+        ctx.decisions[step.id] = true;
+        return false;
+    }
+}
+function yesPath(content) {
+    return content + ' - ' + tr('Yes');
+}
+module.exports = {
+    printScenarios,
+    treeToScenarios
+};
+},{"./drakonToStruct":3}],9:[function(require,module,exports){
 var { buildTree } = require("./technicalTree");
 const { createError, sortByProperty } = require("./tools");
 const { optimizeTree } = require("./treeTools");
@@ -1358,147 +1696,6 @@ function redirectNode(nodes, node, from, to) {
 }
 
 function structFlow(nodes, branches, filename, translate, options) {
-  function flowGraph(nodes, nodeId, branchingStack) {
-    if (!nodeId) {
-      return;
-    }
-
-    const node = nodes[nodeId];
-
-    if (!node.stack) {
-      node.stack = [];
-      node.remaining = node.prev.length;
-    }
-    node.remaining--;
-
-    mergeBranchingStack(nodes, node, branchingStack);
-    if (node.remaining > 0) {
-      return;
-    }
-
-    if (node.type === "question") {
-      for (let i = 0; i < node.stack.length; i++) {
-        const questionId = node.stack[i];
-        const question = nodes[questionId];
-        question.branching++;
-      }
-
-      const stackOne = node.stack.slice();
-      const stackTwo = node.stack.slice();
-      stackOne.push(nodeId);
-      stackTwo.push(nodeId);
-
-      flowGraph(nodes, node.two, stackTwo);
-      flowGraph(nodes, node.one, stackOne);
-    } else if (node.type === "arrow-loop") {
-      const stackOne = node.stack.slice();
-      stackOne.push(nodeId);
-      flowGraph(nodes, node.one, stackOne);
-    } else if (node.type === "arrow-stub") {
-      decrementBranchingForArrow(nodes, node);
-    } else if (node.type === "parbegin") {
-      for (var proc of node.procs) {
-        flowGraph(nodes, proc.start, []);
-      }
-      flowGraph(nodes, node.one, node.stack);
-    } else {
-      flowGraph(nodes, node.one, node.stack);
-    }
-  }
-
-  function decrementBranchingForArrow(nodes, node) {
-    var algonode = nodes[node.arrow];
-    algonode.branching--;
-  }
-
-  function decrementQuestions(nodes, algonode, dictionary) {
-    var stub = nodes[algonode.stub];
-    for (var id of stub.stack) {
-      var snode = nodes[id];
-      if (id !== algonode.id) {
-        if (id in dictionary) {
-          snode.branching--;
-        }
-      }
-    }
-    return stub;
-  }
-
-  function mergeBranchingStack(nodes, node, branchingStack) {
-    // Append all elements of the branching stack to node.stack
-    addRange(node.stack, branchingStack);
-
-    // Build a dictionary of occurrences
-    const dictionary = buildDictionaryOfOccurences(node);
-
-    // Merge all nodes
-    mergeAll(nodes, node, dictionary);
-
-    // Rebuild the stack
-    node.stack = buildStackFromDictionary(dictionary);
-  }
-
-  function addRange(dst, src) {
-    for (let i = 0; i < src.length; i++) {
-      dst.push(src[i]);
-    }
-  }
-
-  function buildStackFromDictionary(dictionary) {
-    const rebuiltStack = [];
-    for (const id in dictionary) {
-      if (dictionary[id] > 0) {
-        rebuiltStack.push(id);
-      }
-    }
-    return rebuiltStack;
-  }
-
-  function buildDictionaryOfOccurences(node) {
-    const dictionary = {};
-    for (let i = 0; i < node.stack.length; i++) {
-      const id = node.stack[i];
-      dictionary[id] = (dictionary[id] || 0) + 1;
-    }
-    return dictionary;
-  }
-
-  function mergeAll(nodes, node, dictionary) {
-    for (const id in dictionary) {
-      const occurrences = dictionary[id];
-      const algonode = nodes[id];
-      if (occurrences > 1) {
-        algonode.branching--;
-        dictionary[id] = occurrences - 1;
-      }
-      if (algonode.branching === 1) {
-        if (algonode.type === "arrow-loop" && !algonode.next) {
-          if (!isInMap(node.astack, id)) {
-            algonode.next = node.id;
-            dictionary[algonode.id] = 0;
-            var stub = decrementQuestions(nodes, algonode, dictionary);
-            stub.one = node.id;
-          }
-        }
-      }
-    }
-
-    for (const id in dictionary) {
-      const algonode = nodes[id];
-      if (algonode.branching === 1) {
-        if (algonode.type === "question") {
-          algonode.next = node.id;
-          dictionary[algonode.id] = 0;
-        }
-      }
-    }
-  }
-  function isInMap(map, key) {
-    if (!map) {
-      return false;
-    }
-    return key in map;
-  }
 
   function prepareQuestions(nodes) {
     for (const nodeId in nodes) {
@@ -1600,136 +1797,12 @@ function structFlow(nodes, branches, filename, translate, options) {
     return stub;
   }
 
-  function copySide(dst, src) {
-    if (src.side) {
-      dst.side = src.side;
-    }
-  }
-
-  function rewriteTree(body, index, endId, output) {
-    while (index < body.length) {
-      var node = body[index];
-      index++;
-      if (endId && node.id === endId) {
-        return index;
-      }
-      if (node.type === "question") {
-        var transformed = rewriteQuestionTree(node, output);
-        copySide(transformed, node);
-        if (endId) {
-          var breakYes = findLoopEnd(transformed.yes, endId);
-          var breakNo = findLoopEnd(transformed.no, endId);
-          if (breakYes || breakNo) {
-            var toBreak = [];
-            findPlacesToBreak(transformed.yes, endId, toBreak);
-            findPlacesToBreak(transformed.no, endId, toBreak);
-            addBreaks(toBreak);
-            return index;
-          }
-        }
-      } else if (node.type === "loopbegin") {
-        var body2 = [];
-        index = rewriteTree(body, index, node.end, body2);
-        output.push({
-          id: node.id,
-          type: "loop",
-          content: node.content,
-          body: body2,
-        });
-      } else if (node.type === "parbegin") {
-        var copy = {
-          id: node.id,
-          type: node.type,
-          procs: [],
-        };
-        for (var proc of node.procs) {
-          var procCopy = {
-            ordinal: proc.ordinal,
-            body: [],
-          };
-          copy.procs.push(procCopy);
-          rewriteTree(proc.body, 0, undefined, procCopy.body);
-        }
-        output.push(copy);
-      } else {
-        output.push(node);
-      }
-    }
-  }
-
-  function findPlacesToBreak(body, endId, output) {
-    if (body.length === 0) {
-      output.push(body);
-      return;
-    }
-    var last = body[body.length - 1];
-    if (last.id === endId) {
-      return;
-    }
-    if (last.type === "question") {
-      var qends = [];
-      findPlacesToBreak(last.yes, endId, qends);
-      findPlacesToBreak(last.no, endId, qends);
-      if (qends.length === 2 && qends[0] === last.yes && qends[1] === last.no) {
-        output.push(body);
-      } else {
-        addRange(output, qends);
-      }
-    } else {
-      output.push(body);
-    }
-  }
-
-  function findLoopEnd(body, endId) {
-    for (var i = 0; i < body.length; i++) {
-      var node = body[i];
-      if (node.id === endId) {
-        if (i === body.length - 1) {
-          return true;
-        } else {
-          throw createError(
-            translate(
-              "An exit from the loop must lead to the point right after the loop end",
-            ),
-            filename,
-            node.id,
-          );
-        }
-      }
-      if (node.type === "question") {
-        if (findLoopEnd(node.yes, endId)) {
-          return true;
-        }
-        if (findLoopEnd(node.no, endId)) {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
-  function addBreaks(toBreak) {
-    for (var body of toBreak) {
-      body.push({
-        type: "break",
-      });
-    }
-  }
-
-  function rewriteQuestionTree(question, output) {
-    var yes = [];
-    var no = [];
-    rewriteTree(question.yes, 0, undefined, yes);
-    rewriteTree(question.no, 0, undefined, no);
-    var transformed = {
-      type: "question",
-      id: question.id,
-      content: question.content,
-      yes: yes,
-      no: no,
-    };
-    output.push(transformed);
-    return transformed;
+  function onError(message, nodeId) {
+    throw createError(
+      translate(message),
+      filename,
+      nodeId
+    );
   }
 
   function structMain() {
@@ -1738,24 +1811,19 @@ function structFlow(nodes, branches, filename, translate, options) {
     var result = [];
 
     for (var branch of branches) {
-      if (options.noLoop) {
-        flow_no_loop(nodes, branch.next, []);
-      } else {
-        flowGraph(nodes, branch.next, []);
-      }
+      flow_no_loop(nodes, branch.next, []);
     }
 
     for (var branch of branches) {
       var body = [];
-      buildTree(nodes, branch.next, body, "<dummy id>");
-      var body2 = [];
-      rewriteTree(body, 0, undefined, body2);
+      buildTree(nodes, branch.next, body, "<dummy id>", undefined, onError);
+
       result.push({
         name: branch.content,
         branchId: branch.branchId,
         id: branch.id,        
         refs: branch.prev.length,
-        body: optimizeTree(body2),
+        body: optimizeTree(body),
       });
     }
 
@@ -1766,10 +1834,16 @@ function structFlow(nodes, branches, filename, translate, options) {
 }
 module.exports = { structFlow, redirectNode };
 
-},{"./noloop":6,"./technicalTree":9,"./tools":10,"./treeTools":12}],9:[function(require,module,exports){
-function buildTree(nodes, nodeId, body, stopId) {
+},{"./noloop":6,"./technicalTree":10,"./tools":11,"./treeTools":13}],10:[function(require,module,exports){
+function buildTree(nodes, nodeId, body, stopId, afterLoop, onError) {
     while (nodeId) {
-        if (nodeId === stopId) {return;}
+        if (nodeId === afterLoop) {
+            body.push({type: "break"}) 
+            return
+        }
+        if (nodeId === stopId) {
+            return;
+        }
         const node = nodes[nodeId];
         let transformed;
         let next;
@@ -1788,25 +1862,43 @@ function buildTree(nodes, nodeId, body, stopId) {
             const yesNodeId = node.flag1 === 1 ? node.one : node.two;
             const noNodeId = node.flag1 === 1 ? node.two : node.one;
 
-            buildTree(nodes, yesNodeId, transformed.yes, node.next);
-            buildTree(nodes, noNodeId, transformed.no, node.next);
+            buildTree(nodes, yesNodeId, transformed.yes, node.next, afterLoop, onError);
+            buildTree(nodes, noNodeId, transformed.no, node.next, afterLoop, onError);
+            if (next === afterLoop) {
+                next = undefined
+            }
+        } else if (node.type == "loopbegin") {
+            transformed = {
+                id: node.id,
+                type: "loopbegin",
+                content: node.content,
+                end: node.end,
+                body: []
+            };
+            var end = nodes[node.end]
+            buildTree(nodes, node.one, transformed.body, node.end, end.one, onError)
+            next = node.next;   
+        } else if (node.type == "loopend") {
+            if (stopId !== afterLoop) {
+                onError(
+                    "An exit from the loop must lead to the point right after the loop end",
+                    node.id
+                )
+            }
+            return            
         } else if (node.type === "arrow-loop") {
             transformed = {
                 id: node.id,
                 type: "loopbegin",
                 content: "",
-                end: node.stub
+                end: node.stub,
+                body: []
             };
-
-            next = node.one;
+            var end = nodes[node.stub]
+            buildTree(nodes, node.one, transformed.body, node.stub, end.one, onError)
+            next = node.next;  
         } else if (node.type === "arrow-stub") {
-            transformed = {
-                id: node.id,
-                type: "loopend",
-                start: node.arrow
-            };
-
-            next = node.one;
+            return
         } else if (node.type === "parbegin") {
             transformed = {
                 id: node.id,
@@ -1819,7 +1911,7 @@ function buildTree(nodes, nodeId, body, stopId) {
                     body: []
                 }
                 transformed.procs.push(childProc)
-                buildTree(nodes, proc.start, childProc.body, undefined)
+                buildTree(nodes, proc.start, childProc.body, undefined, undefined, buildTree)
             }
             next = node.one;
         } else {
@@ -1875,7 +1967,7 @@ function reserveNext(nodes, node) {
 
 module.exports = {buildTree}
 
-},{}],10:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 
 function createError(message, filename, nodeId) {
     var error = new Error(message)
@@ -1916,8 +2008,15 @@ function addRange(to, from) {
     }
 }
 module.exports = { createError, sortByProperty, addRange, remove }
-},{}],11:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 var translationsRu = {
+    "Parallel process": "Параллельный процесс",
+    "Scenario": "Сценарий",
+    "scenarios": "сценарии",
+    "Iteration": "Итерация",
+    "No": "Нет",
+    "Yes": "Да",
+    "Skip loop": "Пропустить цикл",    
     "error": "ОШИБКА",
     "not": "не",
     break: 'выход из цикла',
@@ -1955,6 +2054,13 @@ var translationsRu = {
 }
 
 var translationsEn = {
+    "Parallel process":"Parallel process",
+    "Scenario":"Scenario",
+    "scenarios":"scenarios",
+    "Iteration":"Iteration",
+    "No":"No",
+    "Yes":"Yes",
+    "Skip loop":"Skip loop",    
     error: 'Error',
     not: 'not',
     break: 'break',
@@ -1992,6 +2098,13 @@ var translationsEn = {
 }
 
 var translationsNo = {
+    "Parallel process": "Parallell prosess",
+    "Scenario": "Scenario",
+    "scenarios": "scenarioer",
+    "Iteration": "Iterasjon",
+    "No": "Nei",
+    "Yes": "Ja",
+    "Skip loop": "Hopp over løkke",    
     error: 'Feil',
     not: 'ikke',
     break: 'avslutt løkken',
@@ -2029,6 +2142,13 @@ var translationsNo = {
 };
 
 var translationsFr = {
+    "Parallel process": "Processus parallèle",
+    "Scenario": "Scénario",
+    "scenarios": "scénarios",
+    "Iteration": "Itération",
+    "No": "Non",
+    "Yes": "Oui",
+    "Skip loop": "Ignorer la boucle",    
     error: 'Erreur',
     not: 'non',
     break: 'quitter la boucle',
@@ -2066,6 +2186,13 @@ var translationsFr = {
 };
 
 var translationsDe = {
+    "Parallel process": "Paralleler Prozess",
+    "Scenario": "Szenario",
+    "scenarios": "Szenarien",
+    "Iteration": "Iteration",
+    "No": "Nein",
+    "Yes": "Ja",
+    "Skip loop": "Schleife überspringen",    
     error: 'Fehler',
     not: 'nicht',
     break: 'Schleife beenden',
@@ -2103,6 +2230,13 @@ var translationsDe = {
 };
 
 var translationsEs = {
+    "Parallel process": "Proceso paralelo",
+    "Scenario": "Escenario",
+    "scenarios": "escenarios",
+    "Iteration": "Iteración",
+    "No": "No",
+    "Yes": "Sí",
+    "Skip loop": "Omitir bucle",    
     error: 'Error',
     not: 'no',
     break: 'salir del bucle',
@@ -2140,6 +2274,13 @@ var translationsEs = {
 };
 
 var translationsLt = {
+    "Parallel process": "Lygiagretus procesas",
+    "Scenario": "Scenarijus",
+    "scenarios": "scenarijai",
+    "Iteration": "Iteracija",
+    "No": "Ne",
+    "Yes": "Taip",
+    "Skip loop": "Praleisti ciklą",    
     error: 'Klaida',
     not: 'ne',
     break: 'nutraukti ciklą',
@@ -2203,7 +2344,7 @@ function setUpLanguage(language) {
 }
 
 module.exports = { setUpLanguage, translate };
-},{}],12:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 
 function optimizeTree(steps) {
     var result = []
@@ -2211,23 +2352,21 @@ function optimizeTree(steps) {
     for (var step of steps) {
         if (step.type === "end" || step.type === "branch" || step.type === "loopend") { continue }
         if ((step.type === "action" || step.type === "comment") && !step.content) { continue }
-        var copy
         if (step.type === "question") {
-            copy = optimizeQuestion(step)
+            optimizeQuestion(step, result)
         } else if (step.type === "parbegin") {
-            copy = optimizeParbegin(step)
-        } else if (step.type === "loop") {
-            copy = optimizeLoop(step)
+            optimizeParbegin(step, result)
+        } else if (step.type === "loop" || step.type === "loopbegin") {
+            optimizeLoop(step, result)
         } else {
-            copy = step
+            result.push(step)
         }
-        result.push(copy)
     }
 
     return result
 }
 
-function optimizeParbegin(step) {
+function optimizeParbegin(step, output) {
     var procs = []
     for (var proc of step.procs) {
         var procCopy = {
@@ -2236,53 +2375,62 @@ function optimizeParbegin(step) {
         }
         procs.push(procCopy)
     }
-    return {
+    output.push({
         id: step.id,
         type: step.type,
         procs: procs
-    }
+    })
 }
 
-function optimizeLoop(step) {
-    return {
+function optimizeLoop(step, output) {
+    output.push({
         id: step.id,
-        type: step.type,
+        type: "loop",
         content: step.content,
         body: optimizeTree(step.body)
-    }
+    })
 }
 
-function optimizeQuestion(step) {
+function endsWithBreak(body) {
+    if (body.length === 0) {
+        return false
+    }
+    var lastId = body.length - 1
+    return body[lastId].type === "break"
+}
+
+function optimizeQuestion(step, output) {
     var yes = optimizeTree(step.yes)
     var no = optimizeTree(step.no)
-    if (yes.length === 0 && no.length === 0) {
-        return {
-            id: step.id,
-            side: step.side,
-            type: step.type,
-            content: step.content,
-            yes: [],
-            no: []
-        }    
-    }
-    if (yes.length === 0) {
-        return {
-            id: step.id,
-            side: step.side,
-            type: step.type,
-            content: {operator:"not",operand:step.content},
-            yes: no,
-            no: []
-        }
-    }
-    return {
+    var breakYes = endsWithBreak(yes)
+    var breakNo = endsWithBreak(no)
+
+    var result = {
         id: step.id,
         side: step.side,
-        type: step.type,
-        content: step.content,
-        yes: yes,
-        no: no
+        type: step.type
+    }
+    if (breakYes && breakNo) {
+        yes.pop()
+        no.pop()
     }    
+    if (yes.length === 0 && no.length === 0) {
+        result.content = step.content
+        result.yes = []
+        result.no = []
+    } else if (yes.length === 0) {
+        result.content = {operator:"not",operand:step.content}
+        result.yes = no
+        result.no = []
+    } else {
+        result.content = step.content,
+        result.yes = yes,
+        result.no = no
+    }
+    output.push(result)
+    if (breakYes && breakNo) {
+        output.push({type: "break"})
+    }
 }
 
 

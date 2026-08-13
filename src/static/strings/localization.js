@@ -1,6 +1,7 @@
 function getLocalizedStrings(language) {
   if (language === "ru") {
     return {
+      "scenarios": "сценарии",
       "Selection mode": "Режим выделения",
       "Exit selection mode": "Выйти из режима выделения",      
       "My diagrams": "Мои диаграммы",
@@ -465,6 +466,7 @@ function getLocalizedStrings(language) {
 
   if (language === "de") {
     return {
+      "scenarios": "Szenarien",
       "Selection mode": "Auswahlmodus",
       "Exit selection mode": "Auswahlmodus beenden",
       "My diagrams": "Meine Diagramme",
@@ -936,6 +938,7 @@ function getLocalizedStrings(language) {
 
   if (language === "fr") {
     return {
+      "scenarios": "scénarios",
       "Selection mode": "Mode de sélection",
       "Exit selection mode": "Quitter le mode de sélection",
       "My diagrams": "Mes diagrammes",
@@ -1406,6 +1409,7 @@ function getLocalizedStrings(language) {
 
   if (language === "lt") {
     return {
+      "scenarios": "scenarijai",
       "Selection mode": "Pasirinkimo režimas",
       "Exit selection mode": "Išeiti iš pasirinkimo režimo",
       "My diagrams": "Mano diagramos",
@@ -1874,6 +1878,7 @@ function getLocalizedStrings(language) {
 
   if (language === "es") {
     return {
+      "scenarios": "escenarios",
       "Selection mode": "Modo de selección",
       "Exit selection mode": "Salir del modo de selección",      
       "My diagrams": "Mis diagramas",
@@ -2343,6 +2348,7 @@ function getLocalizedStrings(language) {
 
   if (language === "no") {
     return {
+      "scenarios": "scenarioer",
       "Selection mode": "Utvalgsmodus",
       "Exit selection mode": "Avslutt utvalgsmodus",      
       "My diagrams": "Mine diagrammer",

@@ -193,12 +193,12 @@ function DrakonHubWidget() {
         }
     }
     function showInsertionSockets(type) {
-        var _selectValue_202;
-        _selectValue_202 = self.type;
-        if (_selectValue_202 === 'drakon') {
+        var _selectValue_2;
+        _selectValue_2 = self.type;
+        if (_selectValue_2 === 'drakon') {
             self.drakon.showInsertionSockets(type);
         } else {
-            if (_selectValue_202 === 'graf') {
+            if (_selectValue_2 === 'graf') {
                 if (type === 'action') {
                     self.drakon.showInsertionSockets('idea');
                 } else {
@@ -221,7 +221,7 @@ function DrakonHubWidget() {
                     }
                 }
             } else {
-                if (_selectValue_202 === 'free') {
+                if (_selectValue_2 === 'free') {
                     if (type === 'action') {
                         self.drakon.insertFree('rectangle');
                     } else {
@@ -250,6 +250,9 @@ function DrakonHubWidget() {
     }
     function showPaste() {
         self.drakon.showPaste();
+    }
+    function showScenarios() {
+        generateCode(self, true);
     }
     function undo() {
         performUndo(self);
@@ -280,6 +283,7 @@ function DrakonHubWidget() {
     self.showInsertionSockets = showInsertionSockets;
     self.showItem = showItem;
     self.showPaste = showPaste;
+    self.showScenarios = showScenarios;
     self.undo = undo;
     return self;
 }
@@ -2035,10 +2039,10 @@ function createWidget(widget, data) {
     return widget;
 }
 function detectDescChange(widget, edit) {
-    var _collection_206, change, desc;
+    var _collection_2, change, desc;
     desc = undefined;
-    _collection_206 = edit.changes;
-    for (change of _collection_206) {
+    _collection_2 = edit.changes;
+    for (change of _collection_2) {
         if (!(change.id || !('description' in change.fields))) {
             desc = change.fields.description;
             break;
@@ -2326,50 +2330,66 @@ function fillDescCore(widget, desc) {
     } else {
     }
 }
-function generateByType(diagram, language) {
+function generateByType(diagram, language, scen) {
     var content, json, name, type;
     json = JSON.stringify(diagram, null, 4);
     json = utils.replace(json, '\xA0', ' ');
     name = diagram.name;
-    type = diagram.type;
-    if (type === 'drakon') {
+    if (scen) {
         if (language === 'json') {
             try {
-                content = drakongen.toTree(json, name, name + '.drakon', language);
+                content = drakongen.makeScenariosJson(json, name, name + '.drakon', language);
             } catch (ex) {
                 return buildGenError(ex);
             }
         } else {
             try {
-                content = drakongen.toPseudocode(json, name, name + '.drakon', language);
+                content = drakongen.makeScenarios(json, name, name + '.drakon', language);
             } catch (ex) {
                 return buildGenError(ex);
             }
         }
     } else {
-        if (type === 'graf') {
+        type = diagram.type;
+        if (type === 'drakon') {
             if (language === 'json') {
                 try {
-                    content = drakongen.toMindTreeJson(json, name, name + '.graf', language);
+                    content = drakongen.toTree(json, name, name + '.drakon', language);
                 } catch (ex) {
                     return buildGenError(ex);
                 }
             } else {
                 try {
-                    content = drakongen.toMindTree(json, name, name + '.graf', language);
+                    content = drakongen.toPseudocode(json, name, name + '.drakon', language);
                 } catch (ex) {
                     return buildGenError(ex);
                 }
             }
         } else {
-            if (type === 'free' && !(language === 'json')) {
-                try {
-                    content = drakongen.freeToText(json, name, name + '.free', language);
-                } catch (ex) {
-                    return buildGenError(ex);
+            if (type === 'graf') {
+                if (language === 'json') {
+                    try {
+                        content = drakongen.toMindTreeJson(json, name, name + '.graf', language);
+                    } catch (ex) {
+                        return buildGenError(ex);
+                    }
+                } else {
+                    try {
+                        content = drakongen.toMindTree(json, name, name + '.graf', language);
+                    } catch (ex) {
+                        return buildGenError(ex);
+                    }
                 }
             } else {
-                content = '';
+                if (type === 'free' && !(language === 'json')) {
+                    try {
+                        content = drakongen.freeToText(json, name, name + '.free', language);
+                    } catch (ex) {
+                        return buildGenError(ex);
+                    }
+                } else {
+                    content = '';
+                }
             }
         }
     }
@@ -2378,17 +2398,17 @@ function generateByType(diagram, language) {
         content: content
     };
 }
-async function generateCode(widget) {
+async function generateCode(widget, scen) {
     var generated, language;
     language = getPseudoLanguage();
-    generated = generateCore(widget, language);
-    showPseudocode(widget, generated);
+    generated = generateCore(widget, language, scen);
+    showPseudocode(widget, generated, undefined, scen);
 }
-function generateCore(widget, language) {
+function generateCore(widget, language, scen) {
     var json, obj;
     json = widget.drakon.exportJson();
     obj = JSON.parse(json);
-    return generateByType(obj, language);
+    return generateByType(obj, language, scen);
 }
 function getCanvasWidget(widget) {
     return widget.drakon;
@@ -3340,7 +3360,7 @@ function readFileAsBase64_create(file) {
     return me;
 }
 function rebuildToolbar(widget) {
-    var _selectValue_225, tr, type, typeCombo;
+    var _selectValue_2, tr, type, typeCombo;
     tr = widget.widgetSettings.translate;
     html.clear(widget.buttonsBar);
     if (widget.widgetSettings.mainMenuButton) {
@@ -3359,8 +3379,8 @@ function rebuildToolbar(widget) {
             if (widget.widgetSettings.showUndo) {
                 addToolbarRow(widget, widget.commonButtons, 'undo.png', performUndo, 'Undo', 'redo.png', performRedo, 'Redo');
             }
-            _selectValue_225 = widget.diagram.type;
-            if (_selectValue_225 === 'drakon') {
+            _selectValue_2 = widget.diagram.type;
+            if (_selectValue_2 === 'drakon') {
                 typeCombo = html.createElement('select');
                 typeCombo.style.width = '82px';
                 typeCombo.style.marginTop = '3px';
@@ -3381,11 +3401,11 @@ function rebuildToolbar(widget) {
                 });
                 updateIconButtons(widget);
             } else {
-                if (_selectValue_225 === 'graf') {
+                if (_selectValue_2 === 'graf') {
                     updateMindButtons(widget);
                 } else {
-                    if (!(_selectValue_225 === 'free')) {
-                        throw new Error('Unexpected case value: ' + _selectValue_225);
+                    if (!(_selectValue_2 === 'free')) {
+                        throw new Error('Unexpected case value: ' + _selectValue_2);
                     }
                     typeCombo = html.createElement('select');
                     typeCombo.style.width = '82px';
@@ -3427,7 +3447,7 @@ function regenerateMany(docs, language) {
     var doc, generated, prompt, pseudo;
     generated = [];
     for (doc of docs) {
-        pseudo = generateByType(doc, language);
+        pseudo = generateByType(doc, language, false);
         generated.push(pseudo.content);
     }
     if (language === 'json') {
@@ -3440,15 +3460,15 @@ function regenerateMany(docs, language) {
         content: prompt
     };
 }
-function regeneratePseudocode(widget, language, docs) {
+function regeneratePseudocode(widget, language, docs, scen) {
     var generated;
     if (docs) {
         generated = regenerateMany(docs, language);
     } else {
-        generated = generateCore(widget, language);
+        generated = generateCore(widget, language, scen);
     }
     setPseudoLanguage(language);
-    showPseudocode(widget, generated, docs);
+    showPseudocode(widget, generated, docs, scen);
 }
 function registerEvent(element, eventName, action) {
     tracing.registerEvent(element, eventName, action);
@@ -3834,7 +3854,7 @@ function showDescription(widget) {
     }
 }
 function showPalette(context, launcher, value, onColorChosen) {
-    var _collection_208, apply, bottom, chooseColor, chooseColorLight, closeAndUse, color, currentContainer, data, i, input, line, lineColor, lineContainer, lines, paletteWindow, recent, rect;
+    var _collection_2, apply, bottom, chooseColor, chooseColorLight, closeAndUse, color, currentContainer, data, i, input, line, lineColor, lineContainer, lines, paletteWindow, recent, rect;
     data = getColorPaletteData();
     paletteWindow = div('shadow', {
         background: 'white',
@@ -3880,8 +3900,8 @@ function showPalette(context, launcher, value, onColorChosen) {
             break;
         }
     }
-    _collection_208 = data.lines;
-    for (line of _collection_208) {
+    _collection_2 = data.lines;
+    for (line of _collection_2) {
         lineContainer = div({
             'padding-left': '5px',
             'padding-top': '1px',
@@ -3920,8 +3940,8 @@ function showPalette(context, launcher, value, onColorChosen) {
     rect = launcher.getBoundingClientRect();
     widgets.pushSemiModalPopup(paletteWindow, rect.left, rect.bottom);
 }
-function showPseudocode(widget, generated, docs) {
-    var buttonStyle, buttons, close, combo, container, copy, dialog, generate, headerSize, language, options, pre, regenerate, tr;
+function showPseudocode(widget, generated, docs, scen) {
+    var buttonStyle, buttons, close, combo, container, copy, dialog, generate, header, headerSize, language, options, pre, regenerate, tr;
     language = getPseudoLanguage();
     tr = widget.widgetSettings.translate;
     dialog = widgets.createWideMiddleWindow();
@@ -3968,7 +3988,7 @@ function showPseudocode(widget, generated, docs) {
     combo.value = language;
     html.add(regenerate, combo);
     generate = widgets.createSimpleButton(tr('Generate'), function () {
-        regeneratePseudocode(widget, combo.value, docs);
+        regeneratePseudocode(widget, combo.value, docs, scen);
     });
     generate.style.marginLeft = '5px';
     generate.style.verticalAlign = 'middle';
@@ -3990,6 +4010,11 @@ function showPseudocode(widget, generated, docs) {
         buttons = div(buttonStyle, close);
     }
     html.add(container, buttons);
+    if (scen) {
+        header = utils.capitalize(tr('scenarios'));
+    } else {
+        header = tr('Pseudocode');
+    }
     headerSize = gconfig.fontSize + 2 + 'px';
     html.add(dialog, div({
         'text-align': 'center',
@@ -3997,7 +4022,7 @@ function showPseudocode(widget, generated, docs) {
         'padding-bottom': '10px',
         'position': 'relative'
     }, div({
-        text: tr('Pseudocode'),
+        text: header,
         'font-weight': 'bold',
         'font-size': headerSize
     })));
@@ -4040,15 +4065,15 @@ async function startEditAux2(widget, prim, ro) {
     }
 }
 async function startEditContent(widget, prim, ro) {
-    var _branch_, _selectValue_204, canwidget, fonts, nameChecker, newContent, path, tr;
+    var _branch_, _selectValue_2, canwidget, fonts, nameChecker, newContent, path, tr;
     _branch_ = 'Branch1';
     while (true) {
         switch (_branch_) {
         case 'Branch1':
             tr = widget.widgetSettings.translate;
             path = widget.widgetSettings.imagePath;
-            _selectValue_204 = prim.type;
-            if (_selectValue_204 === 'header') {
+            _selectValue_2 = prim.type;
+            if (_selectValue_2 === 'header') {
                 if (ro) {
                     widgets.inputBoxRo(prim.left, prim.top, tr('Name'), prim.content);
                     _branch_ = 'Exit';
@@ -4252,7 +4277,7 @@ function trimEnd(node) {
     }
 }
 function updateFreeIconButtons(widget) {
-    var _branch_, _selectValue_227, extraFreeIcons, path, row3, tr;
+    var _branch_, _selectValue_2, extraFreeIcons, path, row3, tr;
     _branch_ = 'Clear';
     while (true) {
         switch (_branch_) {
@@ -4284,15 +4309,15 @@ function updateFreeIconButtons(widget) {
             addIconRowFree(widget, widget.iconButtons, 'callout.png', 'callout', 'Callout', '', 'circle.png', 'f_circle', 'Ellipse', 'E');
             addIconRowFree(widget, widget.iconButtons, 'frame.png', 'frame', 'Frame', '', 'triangle.png', 'triangle', 'Triangle', '');
             localStorage.setItem('drakonhubwidget-free-toolbar-type', widget.typeCombo.value);
-            _selectValue_227 = widget.typeCombo.value;
-            if (_selectValue_227 === 'basic') {
+            _selectValue_2 = widget.typeCombo.value;
+            if (_selectValue_2 === 'basic') {
                 _branch_ = 'Exit';
             } else {
-                if (_selectValue_227 === 'ui') {
+                if (_selectValue_2 === 'ui') {
                     _branch_ = 'UI';
                 } else {
-                    if (!(_selectValue_227 === 'architect')) {
-                        throw new Error('Unexpected case value: ' + _selectValue_227);
+                    if (!(_selectValue_2 === 'architect')) {
+                        throw new Error('Unexpected case value: ' + _selectValue_2);
                     }
                     _branch_ = 'Architect';
                 }
@@ -4336,7 +4361,7 @@ function updateFreeIconButtons(widget) {
     }
 }
 function updateIconButtons(widget) {
-    var _selectValue_229, path, row, row2, row3, row4, tr;
+    var _selectValue_2, path, row, row2, row3, row4, tr;
     tr = widget.widgetSettings.translate;
     path = widget.widgetSettings.imagePath;
     html.clear(widget.iconButtons);
@@ -4350,8 +4375,8 @@ function updateIconButtons(widget) {
         toggleSilhouette(widget);
     }, tr('Silhouette / primitive'), undefined);
     localStorage.setItem('drakonhubwidget-toolbar-type', widget.typeCombo.value);
-    _selectValue_229 = widget.typeCombo.value;
-    if (_selectValue_229 === 'basic') {
+    _selectValue_2 = widget.typeCombo.value;
+    if (_selectValue_2 === 'basic') {
         addIconRow(widget, widget.iconButtons, 'foreach.png', 'foreach', 'FOR Loop', 'L', 'insertion.png', 'insertion', 'Insertion', 'N');
         row2 = addRowToToolbar(widget.iconButtons);
         addIconButton(widget, row2, 'comment.png', function () {
@@ -4362,7 +4387,7 @@ function updateIconButtons(widget) {
         }, tr('Picture'), undefined);
         html.add(widget.iconButtons, div({ height: '10px' }));
     } else {
-        if (_selectValue_229 === 'medic') {
+        if (_selectValue_2 === 'medic') {
             addIconRow(widget, widget.iconButtons, 'parblock.png', 'parblock', 'Concurrent processes', '', 'par.png', 'par', 'Add path', '');
             addIconRow(widget, widget.iconButtons, 'ctrl-start.png', 'ctrlstart', 'Start of control period', '', 'ctrl-end.png', 'ctrlend', 'End of control period', '');
             addIconRow(widget, widget.iconButtons, 'pause.png', 'pause', 'Pause', '', 'duration.png', 'duration', 'Duration', '');
@@ -4383,8 +4408,8 @@ function updateIconButtons(widget) {
             }, tr('Picture'), undefined);
             html.add(widget.iconButtons, div({ height: '10px' }));
         } else {
-            if (!(_selectValue_229 === 'all')) {
-                throw new Error('Unexpected case value: ' + _selectValue_229);
+            if (!(_selectValue_2 === 'all')) {
+                throw new Error('Unexpected case value: ' + _selectValue_2);
             }
             addIconRow(widget, widget.iconButtons, 'foreach.png', 'foreach', 'FOR Loop', 'L', 'timer.png', 'timer', 'Timer', '');
             addIconRow(widget, widget.iconButtons, 'sinput.png', 'simpleinput', 'Simple input', '', 'soutput.png', 'simpleoutput', 'Simple output', '');

@@ -16,10 +16,10 @@ function DesktopEditorScreen() {
         dh2common.subscribeOnResize(self.drakon.onResize);
     }
     function onChange(change) {
-        var _collection_111, changeItem;
+        var _collection_2, changeItem;
         if (change.op === 'update') {
-            _collection_111 = change.items;
-            for (changeItem of _collection_111) {
+            _collection_2 = change.items;
+            for (changeItem of _collection_2) {
                 if (changeItem.id === self.folderId && 'name' in changeItem) {
                     launcher.setTitle(changeItem.name);
                     break;
@@ -28,11 +28,20 @@ function DesktopEditorScreen() {
         }
     }
     function redraw(container) {
-        var editorDiv;
+        var close, editorDiv;
         container.style.overflow = 'hidden';
         editorDiv = dh2common.buildWidgetDom(container, self.drakon);
         editorDiv.style.width = '100%';
         editorDiv.style.height = '100%';
+        close = widgets.createIconButton(dh2common.ipath('cross.png'), closeFile);
+        close.style.display = 'inline-block';
+        close.style.position = 'absolute';
+        close.style.margin = '0px';
+        close.style.border = '0px';
+        close.style.right = '2px';
+        close.style.top = '2px';
+        close.style.background = 'green';
+        html.add(container, close);
     }
     async function setFolder(folder, userSettings) {
         folder.id = folder.name + '.' + folder.type;
@@ -89,12 +98,12 @@ function EditSenderOff() {
         }
     }
     async function sendOut() {
-        var _collection_106, copy, id, item, saved;
+        var _collection_2, copy, id, item, saved;
         copy = utils.deepClone(unit.diagram);
         if (copy.items) {
-            _collection_106 = copy.items;
-            for (id in _collection_106) {
-                item = _collection_106[id];
+            _collection_2 = copy.items;
+            for (id in _collection_2) {
+                item = _collection_2[id];
                 delete item.id;
             }
         }
@@ -476,9 +485,9 @@ function getOperationName(operation) {
     }
 }
 function getRenameEdit(edit) {
-    var _collection_109, change;
-    _collection_109 = edit.changes;
-    for (change of _collection_109) {
+    var _collection_2, change;
+    _collection_2 = edit.changes;
+    for (change of _collection_2) {
         if (!(change.id || !('name' in change.fields))) {
             return change;
         }
@@ -908,7 +917,7 @@ function showContextMenuOff(widget, x, y, items, prim) {
     widgets.showContextMenu(x, y, items, options);
 }
 async function showDesktopMainMenu(widget) {
-    var client, createNew, divTopButtons, fitems, items, recentItems, ritems;
+    var client, createNew, divTopButtons, drakon, fitems, items, recentItems, ritems;
     await loadForStart();
     client = div();
     divTopButtons = div();
@@ -929,6 +938,13 @@ async function showDesktopMainMenu(widget) {
         getOperationName('export'),
         saveAsFile
     ]);
+    drakon = getDrakonWidgetOff();
+    if (drakon.getDiagramType() === 'drakon') {
+        fitems.push([
+            utils.capitalize(tr('scenarios')),
+            drakon.showScenarios
+        ]);
+    }
     fitems.push([
         tr('Close diagram'),
         closeFile
