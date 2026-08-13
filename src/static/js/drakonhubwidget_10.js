@@ -2410,6 +2410,9 @@ function generateCore(widget, language, scen) {
     obj = JSON.parse(json);
     return generateByType(obj, language, scen);
 }
+function generatePseudo(widget) {
+    generateCode(widget, false);
+}
 function getCanvasWidget(widget) {
     return widget.drakon;
 }
@@ -3373,7 +3376,7 @@ function rebuildToolbar(widget) {
     if (widget.diagram) {
         addToolbarRow(widget, widget.commonButtons, 'left-angle2.png', hideToolbar, 'Hide toolbar', 'home.png', goHome, 'To diagram home');
         addToolbarRow(widget, widget.commonButtons, 'theme.png', chooseTheme, 'Color theme', 'zoom.png', chooseZoom, 'Zoom');
-        addToolbarRow(widget, widget.commonButtons, 'description.png', showDescription, 'Description', 'code.png', generateCode, 'Pseudocode');
+        addToolbarRow(widget, widget.commonButtons, 'description.png', showDescription, 'Description', 'code.png', generatePseudo, 'Pseudocode');
         if (widget.diagram.access === 'read') {
         } else {
             if (widget.widgetSettings.showUndo) {
